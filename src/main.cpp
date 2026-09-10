@@ -263,6 +263,15 @@ void opcontrol() {
     else {
       lift_motors.move(0);
     }
+    if(master.get_digital(DIGITAL_UP)) {
+      intake_motors.move(127);
+    }
+    else if(master.get_digital(DIGITAL_DOWN)) {
+      intake_motors.move(-127);
+    }
+    else {
+      intake_motors.move(0);
+    }
     claw.button_toggle(master.get_digital(DIGITAL_R2));
 
     pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
