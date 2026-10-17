@@ -376,18 +376,138 @@ void measure_offsets() {
 // . . .
 // Make your own autonomous functions here!
 // . . .
+/*
+// Original custom auton
 void custom_auton() {
   // Example of a custom auton
-  /*
   chassis.pid_turn_set(90_deg, TURN_SPEED);
   chassis.pid_wait_quick_chain();
   chassis.pid_drive_set(24_in,DRIVE_SPEED);
   chassis.pid_wait();
   chassis.pid_swing_set(ez::LEFT_SWING, 45_deg, 90);
-  */
- 
+
  chassis.pid_turn_set({12_in,24_in}, fwd, 90);
  chassis.pid_odom_set({{12_in,24_in}, fwd, DRIVE_SPEED});
  chassis.pid_odom_set({{12_in,24_in}, fwd, DRIVE_SPEED});
- 
+}
+*/
+
+/*
+// Previous placeholder version (intake + claw + timed lift)
+void custom_auton() {
+  // 1. Drive to the first game object with the intake running
+  intake_motors.move(127);
+  chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
+  chassis.pid_wait();
+  pros::delay(300);  // give the intake time to pull it in
+  intake_motors.move(0);
+
+  // 2. Turn toward the goal and drive up to it
+  chassis.pid_turn_set(90_deg, TURN_SPEED);
+  chassis.pid_wait();
+  chassis.pid_drive_set(18_in, DRIVE_SPEED, true);
+  chassis.pid_wait();
+
+  // 3. Grab the goal with the claw
+  claw.set(true);
+  pros::delay(250);
+
+  // 4. Raise the lift and score
+  lift_motors.move(125);
+  pros::delay(800);
+  lift_motors.move(0);
+  intake_motors.move(127);
+  pros::delay(600);
+  intake_motors.move(0);
+
+  // 5. Release, lower the lift, and back away
+  claw.set(false);
+  lift_motors.move(-125);
+  pros::delay(800);
+  lift_motors.move(0);
+  chassis.pid_drive_set(-12_in, DRIVE_SPEED);
+  chassis.pid_wait();
+}
+*/
+
+// ---- Custom auton settings (tune these first) ----
+// Lift positions are in motor degrees, measured from fully down
+const double LIFT_DOWN = 0;
+const double LIFT_CARRY = 150;
+const double LIFT_SCORE = 600;
+const int LIFT_SPEED = 200;  // move_absolute velocity in RPM
+
+// +1 for right start, -1 for left start
+const int SIDE = 1;
+
+const int SLOW_SPEED = 60;         // ~50% of max for careful approaches
+const double GOAL_APPROACH = 8;    // inches from the backed-off spot to over the goal
+const double PIN1_DISTANCE = 18;   // inches
+const double PIN2_DISTANCE = 18;   // inches, measure on field
+const uint32_t PIN2_CUTOFF_MS = 9000;
+
+const bool CLAMP_CLOSED = true;  // flip if claw.set(true) opens your clamp
+const bool CLAMP_OPEN = !CLAMP_CLOSED;
+
+void lift_to(double target, bool wait) {
+  lift_motors.move_absolute(target, LIFT_SPEED);
+  if (!wait) return;
+  uint32_t start = pros::millis();
+  while (fabs(lift_motors.get_position() - target) > 10 && pros::millis() - start < 1500)
+    pros::delay(ez::util::DELAY_TIME);
+}
+
+// Assumes the robot is already lined up in front of the goal
+void score_on_goal() {
+  chassis.pid_turn_set(45.0 * SIDE, TURN_SPEED);
+  chassis.pid_wait();
+  lift_to(LIFT_SCORE, true);
+  chassis.pid_drive_set(GOAL_APPROACH, SLOW_SPEED);
+  chassis.pid_wait();
+  claw.set(CLAMP_OPEN);
+  pros::delay(200);
+  chassis.pid_drive_set(-GOAL_APPROACH, DRIVE_SPEED);
+  chassis.pid_wait();
+  lift_to(LIFT_DOWN, false);
+}
+
+void grab_and_score_pin(double heading, double distance) {
+  chassis.pid_turn_set(heading * SIDE, TURN_SPEED);
+  chassis.pid_wait();
+  intake_motors.move(127);
+  chassis.pid_drive_set(distance, SLOW_SPEED);
+  chassis.pid_wait();
+  pros::delay(250);
+  claw.set(CLAMP_CLOSED);
+  intake_motors.move(0);
+
+  lift_to(LIFT_CARRY, false);
+  chassis.pid_drive_set(-distance, DRIVE_SPEED);
+  chassis.pid_wait();
+  score_on_goal();
+}
+
+void custom_auton() {
+  // Lift must start fully down
+  lift_motors.tare_position_all();
+  lift_motors.set_brake_mode_all(pros::E_MOTOR_BRAKE_HOLD);
+  uint32_t start = pros::millis();
+  claw.set(CLAMP_CLOSED);
+
+  // Step 1: score preload
+  lift_to(LIFT_CARRY, false);
+  chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
+  chassis.pid_wait();
+  score_on_goal();
+
+  // Steps 2-3: grab and score field pin 1
+  grab_and_score_pin(-30, PIN1_DISTANCE);
+
+  // Step 4: pin 2, only if there's time
+  if (pros::millis() - start < PIN2_CUTOFF_MS)
+    grab_and_score_pin(-60, PIN2_DISTANCE);
+
+  intake_motors.move(0);
+  lift_motors.move(0);
+  ez::screen_print("Auton time: " + util::to_string_with_precision((pros::millis() - start) / 1000.0) + " s", 1);
 }
