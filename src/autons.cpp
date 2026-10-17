@@ -385,9 +385,9 @@ void custom_auton() {
   chassis.pid_wait();
   chassis.pid_swing_set(ez::LEFT_SWING, 45_deg, 90);
   */
- /*
+ 
  chassis.pid_turn_set({12_in,24_in}, fwd, 90);
  chassis.pid_odom_set({{12_in,24_in}, fwd, DRIVE_SPEED});
  chassis.pid_odom_set({{12_in,24_in}, fwd, DRIVE_SPEED});
- */
+ 
 }

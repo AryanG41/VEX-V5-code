@@ -206,7 +206,7 @@ void ez_template_extras() {
     //  When enabled:
     //  * use A and Y to increment / decrement the constants
     //  * use the arrow keys to navigate the constants
-    if (master.get_digital_new_press(DIGITAL_X))
+    if (master.get_digital(DIGITAL_DOWN) && master.get_digital_new_press(DIGITAL_Y))
       chassis.pid_tuner_toggle();
 
     // Trigger the selected autonomous routine
@@ -254,19 +254,19 @@ void opcontrol() {
     // chassis.opcontrol_arcade_flipped(ez::SPLIT);    // Flipped split arcade
     // chassis.opcontrol_arcade_flipped(ez::SINGLE);   // Flipped single arcade
 
-    if(master.get_digital(DIGITAL_B)) {
+    if(master.get_digital(DIGITAL_Y)) {
       lift_motors.move(125);
     }
-    else if(master.get_digital(DIGITAL_A)) {
+    else if(master.get_digital(DIGITAL_X)) {
       lift_motors.move(-125);
     }
     else {
       lift_motors.move(0);
     }
-    if(master.get_digital(DIGITAL_UP)) {
+    if(master.get_digital(DIGITAL_LEFT)) {
       intake_motors.move(127);
     }
-    else if(master.get_digital(DIGITAL_DOWN)) {
+    else if(master.get_digital(DIGITAL_RIGHT)) {
       intake_motors.move(-127);
     }
     else {
